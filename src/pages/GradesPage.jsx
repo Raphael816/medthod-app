@@ -1,36 +1,51 @@
 import { useEffect, useState } from 'react'
 import { LineChart } from '../components/LineChart'
-import { Tilt } from '../components/Tilt'
 import { supabase } from '../lib/supabase'
+import { Loading, ErrorState, ProgressBar } from '../components/StateViews'
+import { listUnits } from '../services/units'
+import { listAttempts } from '../services/questions'
+import { listReviewSchedules } from '../services/review'
+import { aggregateUnitMastery, aggregateSubjectMastery, aggregateByQuestionType } from '../services/grades'
 
 const PLAN_STATUS_LABEL = { confirmed: '確定済み', draft: '未生成' }
 
 export function GradesPage({ student }) {
   const [units, setUnits] = useState(null)
   const [records, setRecords] = useState(null)
+  const [attempts, setAttempts] = useState(null)
+  const [reviews, setReviews] = useState(null)
   const [planStatusByWeek, setPlanStatusByWeek] = useState({})
   const [entries, setEntries] = useState({}) // unitId -> { correct, incorrect }
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
+  const [error, setError] = useState('')
 
   async function load() {
-    const { data: unitRows } = await supabase.from('units').select('id, subject, name').order('sort_order')
-    setUnits(unitRows ?? [])
+    setError('')
+    try {
+      const [unitRows, atts, revs] = await Promise.all([
+        listUnits(),
+        listAttempts(student.id),
+        listReviewSchedules(student.id),
+      ])
+      setUnits(unitRows)
+      setAttempts(atts)
+      setReviews(revs)
 
-    const { data: recs } = await supabase
-      .from('weekly_records')
-      .select('id, week_number, weekly_record_units(correct_count, incorrect_count, units(id, subject, name))')
-      .eq('student_id', student.id)
-      .order('week_number')
-    setRecords(recs ?? [])
+      const { data: recs } = await supabase
+        .from('weekly_records')
+        .select('id, week_number, weekly_record_units(correct_count, incorrect_count, unit_id, units(id, subject, name))')
+        .eq('student_id', student.id)
+        .order('week_number')
+      setRecords(recs ?? [])
 
-    const { data: plans } = await supabase
-      .from('weekly_plans')
-      .select('week_number, status')
-      .eq('student_id', student.id)
-    const byWeek = {}
-    for (const p of plans ?? []) byWeek[p.week_number] = p.status
-    setPlanStatusByWeek(byWeek)
+      const { data: plans } = await supabase.from('weekly_plans').select('week_number, status').eq('student_id', student.id)
+      const byWeek = {}
+      for (const p of plans ?? []) byWeek[p.week_number] = p.status
+      setPlanStatusByWeek(byWeek)
+    } catch {
+      setError('読み込みに失敗しました。')
+    }
   }
 
   useEffect(() => {
@@ -38,29 +53,19 @@ export function GradesPage({ student }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [student.id])
 
-  if (units === null || records === null) return <p className="empty-state">読み込み中...</p>
+  if (error) return <ErrorState message={error} />
+  if (units === null || records === null || attempts === null) return <Loading />
 
   const nextWeek = (records.reduce((max, r) => Math.max(max, r.week_number), 0) || 0) + 1
   const subjects = [...new Set(units.map((u) => u.subject))]
 
-  const allUnitResults = records.flatMap((r) => r.weekly_record_units ?? [])
-  const totalCorrect = allUnitResults.reduce((s, r) => s + r.correct_count, 0)
-  const totalIncorrect = allUnitResults.reduce((s, r) => s + r.incorrect_count, 0)
-  const total = totalCorrect + totalIncorrect
-  const overallAccuracy = total > 0 ? `${Math.round((totalCorrect / total) * 100)}%` : '-'
-
-  const unitTotals = new Map()
-  for (const r of allUnitResults) {
-    const key = r.units?.name ?? '不明'
-    const t = unitTotals.get(key) ?? { correct: 0, incorrect: 0 }
-    t.correct += r.correct_count
-    t.incorrect += r.incorrect_count
-    unitTotals.set(key, t)
-  }
-  const topWeakUnit =
-    [...unitTotals.entries()]
-      .filter(([, t]) => t.correct + t.incorrect > 0)
-      .sort((a, b) => a[1].correct / (a[1].correct + a[1].incorrect) - b[1].correct / (b[1].correct + b[1].incorrect))[0]?.[0] ?? '-'
+  const unitMastery = aggregateUnitMastery(records, attempts, units).filter((m) => m.total > 0)
+  const subjectMastery = aggregateSubjectMastery(unitMastery)
+  const typeMastery = aggregateByQuestionType(attempts)
+  const overallTotal = unitMastery.reduce((s, m) => s + m.total, 0)
+  const overallCorrect = unitMastery.reduce((s, m) => s + m.correct, 0)
+  const overallAccuracy = overallTotal > 0 ? Math.round((overallCorrect / overallTotal) * 100) : null
+  const weakUnits = [...unitMastery].sort((a, b) => a.accuracy - b.accuracy).slice(0, 3)
 
   function toggleUnit(unitId) {
     setEntries((prev) => {
@@ -118,23 +123,107 @@ export function GradesPage({ student }) {
   return (
     <>
       <div className="page-header">
-        <h1>成績管理</h1>
+        <h1>成績</h1>
+        <p>週次演習と確認問題の結果をもとに、単元・科目・問題形式ごとの到達度を集計しています。</p>
       </div>
 
-      {records.length > 0 && (
-        <div className="stat-grid">
-          <Tilt className="stat-tile">
-            <div className="value">{records.length}週</div>
-            <div className="label">記録した週数</div>
-          </Tilt>
-          <Tilt className="stat-tile">
-            <div className="value">{overallAccuracy}</div>
-            <div className="label">通算正答率</div>
-          </Tilt>
-          <Tilt className="stat-tile">
-            <div className="value" style={{ fontSize: '1.1rem' }}>{topWeakUnit}</div>
-            <div className="label">最も正答率が低い単元</div>
-          </Tilt>
+      <div className="stat-grid">
+        <div className="stat-tile">
+          <div className="value">{overallAccuracy != null ? `${overallAccuracy}%` : '-'}</div>
+          <div className="label">総合到達度(正答率)</div>
+        </div>
+        <div className="stat-tile">
+          <div className="value">{records.length}週</div>
+          <div className="label">記録した週数</div>
+        </div>
+        <div className="stat-tile">
+          <div className="value" style={{ fontSize: '1.1rem' }}>{weakUnits[0]?.unit.name ?? '-'}</div>
+          <div className="label">最も正答率が低い単元</div>
+        </div>
+      </div>
+
+      {subjectMastery.length > 0 && (
+        <div className="card">
+          <h2 style={{ fontSize: '1.1rem', marginBottom: 16 }}>科目別到達度</h2>
+          <div className="subject-progress-grid">
+            {subjectMastery.map((s) => (
+              <div className="subject-progress-item" key={s.subject}>
+                <div className="subject-name">
+                  <span>{s.subject}</span>
+                  <span>{s.accuracy != null ? `${s.accuracy}%` : '-'}</span>
+                </div>
+                <ProgressBar value={s.accuracy ?? 0} max={100} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {typeMastery.length > 0 && (
+        <div className="card">
+          <h2 style={{ fontSize: '1.1rem', marginBottom: 16 }}>問題形式別の成績</h2>
+          <div className="table-wrap">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>形式</th>
+                  <th>正答数</th>
+                  <th>解答数</th>
+                  <th>正答率</th>
+                </tr>
+              </thead>
+              <tbody>
+                {typeMastery.map((t) => (
+                  <tr key={t.type}>
+                    <td>{t.type}</td>
+                    <td>{t.correct}</td>
+                    <td>{t.total}</td>
+                    <td>{t.accuracy}%</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {unitMastery.length > 0 && (
+        <div className="card">
+          <h2 style={{ fontSize: '1.1rem', marginBottom: 16 }}>単元別到達度</h2>
+          <div className="table-wrap">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>単元</th>
+                  <th>正答数</th>
+                  <th>解答数</th>
+                  <th>正答率</th>
+                </tr>
+              </thead>
+              <tbody>
+                {unitMastery.map((m) => (
+                  <tr key={m.unit.id}>
+                    <td>{m.unit.subject} / {m.unit.name}</td>
+                    <td>{m.correct}</td>
+                    <td>{m.total}</td>
+                    <td>{m.accuracy}%</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {reviews && reviews.length > 0 && (
+        <div className="card">
+          <h2 style={{ fontSize: '1.1rem', marginBottom: 12 }}>次に復習すべき内容</h2>
+          {reviews.slice(0, 5).map((r) => (
+            <div className="upcoming-item" key={r.id}>
+              <span>{r.units?.name}</span>
+              <span className="upcoming-date">{r.due_date}</span>
+            </div>
+          ))}
         </div>
       )}
 
@@ -192,9 +281,9 @@ export function GradesPage({ student }) {
           <LineChart
             labels={records.map((r) => `第${r.week_number}週`)}
             values={records.map((r) => {
-              const units = r.weekly_record_units ?? []
-              const c = units.reduce((s, u) => s + u.correct_count, 0)
-              const t = c + units.reduce((s, u) => s + u.incorrect_count, 0)
+              const ru = r.weekly_record_units ?? []
+              const c = ru.reduce((s, u) => s + u.correct_count, 0)
+              const t = c + ru.reduce((s, u) => s + u.incorrect_count, 0)
               return t > 0 ? (c / t) * 100 : 0
             })}
           />

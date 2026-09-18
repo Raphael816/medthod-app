@@ -1,17 +1,25 @@
 import { useEffect, useState } from 'react'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import { AppShell } from './components/AppShell'
 import { Login } from './pages/Login'
-import { PlanPage } from './pages/PlanPage'
+import { HomePage } from './pages/HomePage'
 import { GradesPage } from './pages/GradesPage'
-import { UnitsPage } from './pages/UnitsPage'
-import { MaterialsPage } from './pages/MaterialsPage'
-import { VideosPage } from './pages/VideosPage'
+import { UniversitiesPage } from './pages/UniversitiesPage'
+import { ProfilePage } from './pages/ProfilePage'
+import { PracticePage } from './pages/PracticePage'
+import { UnitsRegisteredPage } from './pages/study/UnitsRegisteredPage'
+import { UnitsAddPage } from './pages/study/UnitsAddPage'
+import { UnitDetailPage } from './pages/study/UnitDetailPage'
+import { MaterialsListPage } from './pages/study/MaterialsListPage'
+import { MaterialDetailPage } from './pages/study/MaterialDetailPage'
+import { VideosListPage } from './pages/study/VideosListPage'
+import { VideoDetailPage } from './pages/study/VideoDetailPage'
+import { ReviewPage } from './pages/study/ReviewPage'
 import { supabase } from './lib/supabase'
 
 function App() {
   const [session, setSession] = useState(undefined)
   const [student, setStudent] = useState(null)
-  const [page, setPage] = useState('plan')
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session))
@@ -38,22 +46,26 @@ function App() {
   if (!session) return <Login />
   if (!student) return <p className="empty-state">読み込み中...</p>
 
-  const pages = {
-    plan: <PlanPage student={student} />,
-    grades: <GradesPage student={student} />,
-    units: <UnitsPage student={student} />,
-    materials: <MaterialsPage student={student} />,
-    videos: <VideosPage />,
-  }
-
   return (
-    <AppShell
-      studentName={student.name}
-      current={page}
-      onNavigate={setPage}
-      onLogout={() => supabase.auth.signOut()}
-    >
-      {pages[page]}
+    <AppShell studentName={student.name} onLogout={() => supabase.auth.signOut()}>
+      <Routes>
+        <Route path="/" element={<HomePage student={student} />} />
+        <Route path="/study" element={<Navigate to="/study/units" replace />} />
+        <Route path="/study/units" element={<UnitsRegisteredPage student={student} />} />
+        <Route path="/study/units/add" element={<UnitsAddPage student={student} />} />
+        <Route path="/study/units/:unitId" element={<UnitDetailPage student={student} />} />
+        <Route path="/study/materials" element={<MaterialsListPage student={student} />} />
+        <Route path="/study/materials/:materialId" element={<MaterialDetailPage student={student} />} />
+        <Route path="/study/videos" element={<VideosListPage student={student} />} />
+        <Route path="/study/videos/:videoId" element={<VideoDetailPage student={student} />} />
+        <Route path="/study/review" element={<ReviewPage student={student} />} />
+        <Route path="/practice" element={<PracticePage student={student} />} />
+        <Route path="/practice/:unitId" element={<PracticePage student={student} />} />
+        <Route path="/grades" element={<GradesPage student={student} />} />
+        <Route path="/universities" element={<UniversitiesPage student={student} />} />
+        <Route path="/profile" element={<ProfilePage student={student} />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
     </AppShell>
   )
 }
