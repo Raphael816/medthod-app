@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { Tilt } from '../components/Tilt'
 import { supabase } from '../lib/supabase'
 
 function TaskRow({ task, onToggle }) {
@@ -20,7 +19,7 @@ function TaskRow({ task, onToggle }) {
 function PlanCard({ plan, onToggleTask, latest }) {
   const done = plan.tasks.filter((t) => t.is_done).length
   return (
-    <Tilt className="card">
+    <div className="card">
       {latest && <span className="status-pill">最新プラン</span>}
       <h2 style={{ fontSize: '1.3rem', marginBottom: 8 }}>第{plan.week_number}週のプラン</h2>
       {plan.goal_text && (
@@ -39,7 +38,7 @@ function PlanCard({ plan, onToggleTask, latest }) {
           ))}
         </>
       )}
-    </Tilt>
+    </div>
   )
 }
 
