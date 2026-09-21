@@ -62,11 +62,17 @@ export function ReviewPage({ student }) {
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span className={r.due_date <= today ? 'upcoming-date soon' : 'upcoming-date'}>{r.due_date}</span>
                 <Link className="btn btn-outline btn-sm" to={`/study/units/${r.unit_id}`}>
-                  復習する
+                  教材を見る
                 </Link>
-                <button className="btn btn-outline btn-sm" onClick={() => handleDone(r.id)}>
-                  完了
-                </button>
+                {r.question_id ? (
+                  <Link className="btn btn-primary btn-sm" to={`/practice/${r.unit_id}?question=${r.question_id}`}>
+                    問題を解き直す
+                  </Link>
+                ) : (
+                  <button className="btn btn-outline btn-sm" onClick={() => handleDone(r.id)}>
+                    完了
+                  </button>
+                )}
               </div>
             </div>
           ))

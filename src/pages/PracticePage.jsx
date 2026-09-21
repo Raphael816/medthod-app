@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Loading, ErrorState, Empty } from '../components/StateViews'
 import { listUnits, listStudentUnits } from '../services/units'
 import { listQuestionsByUnit, listAttempts, submitAnswer, submitSelfAssessment } from '../services/questions'
-import { scheduleReview } from '../services/review'
+import { completeReviewForQuestion, scheduleReview } from '../services/review'
 
 const SELF_ASSESS_TYPES = ['記述問題', '小論文', '英文読解', '実験考察', 'グラフ読解']
 
@@ -85,6 +85,8 @@ function PracticeSelector({ student }) {
 
 function PracticeSession({ student, unitId }) {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const reviewQuestionId = searchParams.get('question')
   const [units, setUnits] = useState(null)
   const [questions, setQuestions] = useState(null)
   const [index, setIndex] = useState(0)
@@ -98,7 +100,7 @@ function PracticeSession({ student, unitId }) {
     Promise.all([listUnits(), listQuestionsByUnit(unitId)])
       .then(([u, q]) => {
         setUnits(u)
-        setQuestions(q)
+        setQuestions(reviewQuestionId ? q.filter((item) => item.id === reviewQuestionId) : q)
         setIndex(0)
         setAttempt(null)
         setSelected(null)
@@ -106,7 +108,7 @@ function PracticeSession({ student, unitId }) {
         setSessionResults([])
       })
       .catch(() => setError('問題の読み込みに失敗しました。'))
-  }, [unitId])
+  }, [unitId, reviewQuestionId])
 
   const unit = useMemo(() => units?.find((u) => u.id === unitId), [units, unitId])
   const question = questions?.[index]
@@ -114,19 +116,30 @@ function PracticeSession({ student, unitId }) {
   async function handleSubmit() {
     const answer = question.choices ? selected : textAnswer
     if (!answer) return
-    const saved = await submitAnswer(student.id, question, answer)
-    setAttempt(saved)
-    setSessionResults((prev) => [...prev, saved])
-    if (saved.is_correct === false) {
-      await scheduleReview(student.id, unitId, `${question.prompt.slice(0, 30)}… を間違えた`)
+    try {
+      const saved = await submitAnswer(student.id, question, answer)
+      setAttempt(saved)
+      setSessionResults((prev) => [...prev, saved])
+      if (saved.is_correct === false) {
+        await scheduleReview(student.id, unitId, `${question.prompt.slice(0, 30)}… を間違えた`, question.id)
+      } else if (saved.is_correct === true) {
+        await completeReviewForQuestion(student.id, question.id)
+      }
+    } catch {
+      setError('解答結果の保存に失敗しました。時間をおいて再度お試しください。')
     }
   }
 
   async function handleSelfAssess(isCorrect) {
-    await submitSelfAssessment(attempt.id, isCorrect)
-    setAttempt({ ...attempt, is_correct: isCorrect })
-    setSessionResults((prev) => prev.map((r) => (r.id === attempt.id ? { ...r, is_correct: isCorrect } : r)))
-    if (!isCorrect) await scheduleReview(student.id, unitId, `${question.prompt.slice(0, 30)}… を間違えた`)
+    try {
+      await submitSelfAssessment(attempt.id, isCorrect)
+      setAttempt({ ...attempt, is_correct: isCorrect })
+      setSessionResults((prev) => prev.map((r) => (r.id === attempt.id ? { ...r, is_correct: isCorrect } : r)))
+      if (!isCorrect) await scheduleReview(student.id, unitId, `${question.prompt.slice(0, 30)}… を間違えた`, question.id)
+      else await completeReviewForQuestion(student.id, question.id)
+    } catch {
+      setError('自己採点結果の保存に失敗しました。時間をおいて再度お試しください。')
+    }
   }
 
   function handleNext() {
@@ -149,7 +162,7 @@ function PracticeSession({ student, unitId }) {
           </p>
           <h1>{unit.name}</h1>
         </div>
-        <Empty>この単元の確認問題はまだありません。</Empty>
+        <Empty>{reviewQuestionId ? '復習対象の問題が見つかりません。' : 'この単元の確認問題はまだありません。'}</Empty>
       </>
     )
   }

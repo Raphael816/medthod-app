@@ -63,7 +63,7 @@ export function HomePage({ student }) {
             .order('week_number'),
           supabase
             .from('weekly_plans')
-            .select('id, week_number, goal_text, plan_tasks(id, description, is_done, estimated_hours, unit_id, units(subject, name))')
+            .select('id, week_number, goal_text, change_reason, plan_tasks(id, description, is_done, estimated_hours, unit_id, units(subject, name))')
             .eq('student_id', student.id)
             .eq('status', 'confirmed')
             .order('week_number', { ascending: false }),
@@ -169,7 +169,7 @@ export function HomePage({ student }) {
       hours: null,
       done: false,
       dueDate: r.due_date,
-      href: `/study/units/${r.unit_id}`,
+      href: r.question_id ? `/practice/${r.unit_id}?question=${r.question_id}` : `/study/units/${r.unit_id}`,
       isPlanTask: false,
     })),
   ]
@@ -214,6 +214,12 @@ export function HomePage({ student }) {
         <div className="plan-goal" style={{ marginBottom: 16 }}>
           <span className="plan-goal-label">第{latestPlan.week_number}週の目標</span>
           {latestPlan.goal_text}
+        </div>
+      )}
+      {latestPlan?.change_reason && (
+        <div className="plan-goal" style={{ marginBottom: 16 }}>
+          <span className="plan-goal-label">今週この計画にした理由</span>
+          {latestPlan.change_reason}
         </div>
       )}
       {todayTasks.length === 0 ? (
@@ -265,6 +271,11 @@ export function HomePage({ student }) {
                     <span className="plan-goal-label">今週の目標</span>
                     {p.goal_text}
                   </div>
+                )}
+                {p.change_reason && (
+                  <p style={{ margin: '10px 0', color: 'var(--text-muted)' }}>
+                    計画の理由: {p.change_reason}
+                  </p>
                 )}
                 {p.plan_tasks.map((task) => (
                   <label className="task-row" key={task.id}>
