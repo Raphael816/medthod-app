@@ -9,6 +9,7 @@ import { listReviewSchedules } from '../services/review'
 import { listTargetUniversities } from '../services/universities'
 import { aggregateUnitMastery, aggregateSubjectMastery } from '../services/grades'
 import { supabase } from '../lib/supabase'
+import { useEntitlements } from '../context/EntitlementsContext'
 
 function daysUntil(dateStr) {
   if (!dateStr) return null
@@ -30,6 +31,7 @@ export function HomePage({ student }) {
   const [state, setState] = useState(null)
   const [error, setError] = useState('')
   const [showPlanHistory, setShowPlanHistory] = useState(false)
+  const { loading: entitlementsLoading, activeProgram } = useEntitlements()
 
   useEffect(() => {
     async function load() {
@@ -185,6 +187,12 @@ export function HomePage({ student }) {
             <p>
               第一志望: {primaryTarget || '未登録'} {student.exam_date && `・受験予定: ${student.exam_date}`}
             </p>
+            {!entitlementsLoading && (
+              <p className="home-program-badge">
+                現在受講中のプログラム:{' '}
+                {activeProgram ? <strong>{activeProgram.name}</strong> : '受講中のプログラムが登録されていません(監修者にお問い合わせください)'}
+              </p>
+            )}
           </div>
         </div>
         <div className="home-stat-row">

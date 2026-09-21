@@ -172,6 +172,36 @@ a { color: inherit; }
 }
 .empty-state { color: var(--text-muted); text-align: center; padding: 32px 0; }
 
+/* ---------- Locked feature (未購入機能のロック表示) ---------- */
+.locked-feature {
+  text-align: center;
+  padding: 44px 28px;
+  max-width: 480px;
+  margin: 0 auto 24px;
+}
+.locked-feature-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(201,161,90,0.14);
+  color: var(--navy);
+  margin-bottom: 16px;
+}
+.locked-feature h2 {
+  font-size: 1.1rem;
+  color: var(--navy);
+  margin: 0 0 10px;
+}
+.locked-feature p {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  margin: 0 0 20px;
+  line-height: 1.8;
+}
+
 .plan-goal {
   background: rgba(201,161,90,0.08);
   border: 1px solid var(--gold);
@@ -329,6 +359,8 @@ a { color: inherit; }
 .home-header-top { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
 .home-header-top h1 { font-size: 1.4rem; margin-bottom: 4px; }
 .home-header-top p { color: var(--text-muted); margin: 0; font-size: 0.9rem; }
+.home-program-badge { margin-top: 6px !important; }
+.home-program-badge strong { color: var(--navy); }
 .home-stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 16px; }
 .home-stat { text-align: center; }
 .home-stat .value { font-family: var(--heading-font); font-size: 1.5rem; color: var(--navy); font-weight: 700; }
