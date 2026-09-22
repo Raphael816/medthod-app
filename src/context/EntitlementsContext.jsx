@@ -3,52 +3,38 @@ import { supabase } from '../lib/supabase'
 
 const EntitlementsContext = createContext(null)
 
-// 生徒の有効な受講プログラムと、含まれる機能コードをまとめて1回だけ取得する。
-// ここでの判定はUI表示(ロック画面の出し分け)専用。実際のデータ取得・更新の可否は
-// 常にサーバー側のRLS/has_feature関数が最終判断する(このContextはそれを信用しない設計)。
+// 「権限あり/なし」だけでなく、休会・期限切れ・受講履歴なしを区別できるようにする。
+const NO_ENROLLMENT = 'none'
+
+// 生徒の現在プログラム・状態・利用可能機能を、サーバー側のDB関数(get_my_entitlements)
+// から1回だけ取得する。権限ロジックはすべてサーバー(has_feature)が正であり、
+// ここでは結果をUI表示用にキャッシュしているだけ(このContextを信用してデータ取得の
+// 可否を決めることはない。実際のアクセス可否は常にRLSが最終判定する)。
 export function EntitlementsProvider({ studentId, children }) {
-  const [state, setState] = useState(null)
+  const [state, setState] = useState(null) // undefined-like: null = loading
 
   useEffect(() => {
     if (!studentId) return
     let cancelled = false
 
     async function load() {
-      const [{ data: enrollments, error: enrollError }, { data: overrides, error: overrideError }] = await Promise.all([
-        supabase
-          .from('student_program_enrollments')
-          .select('*, service_programs(id, code, name, description, program_features(feature_id, features(code)))')
-          .eq('status', 'active'),
-        supabase.from('student_feature_overrides').select('*, features(code)'),
-      ])
+      const { data, error } = await supabase.rpc('get_my_entitlements')
       if (cancelled) return
-      if (enrollError || overrideError) {
-        setState({ activeEnrollment: null, featureCodes: new Set(), error: true })
+      if (error) {
+        setState({ error: true })
         return
       }
-
-      const today = new Date().toISOString().slice(0, 10)
-      const active = (enrollments ?? []).find((e) => {
-        if (e.starts_at && e.starts_at > today) return false
-        if (e.ends_at && e.ends_at < today) return false
-        return true
+      const row = data?.[0] ?? null
+      setState({
+        error: false,
+        enrollmentStatus: row ? row.enrollment_status : NO_ENROLLMENT,
+        isCurrentlyActive: row ? row.is_currently_active : false,
+        programCode: row?.program_code ?? null,
+        programName: row?.program_name ?? null,
+        startsAt: row?.starts_at ?? null,
+        endsAt: row?.ends_at ?? null,
+        featureCodes: new Set(row?.feature_codes ?? []),
       })
-
-      const featureCodes = new Set(
-        (active?.service_programs?.program_features ?? [])
-          .map((pf) => pf.features?.code)
-          .filter(Boolean),
-      )
-      const now = new Date()
-      for (const o of overrides ?? []) {
-        if (o.expires_at && new Date(o.expires_at) <= now) continue
-        const code = o.features?.code
-        if (!code) continue
-        if (o.is_enabled) featureCodes.add(code)
-        else featureCodes.delete(code)
-      }
-
-      setState({ activeEnrollment: active ?? null, featureCodes, error: false })
     }
 
     load()
@@ -57,16 +43,23 @@ export function EntitlementsProvider({ studentId, children }) {
     }
   }, [studentId])
 
-  const value = useMemo(
-    () => ({
-      loading: state === null,
-      error: state?.error ?? false,
-      activeProgram: state?.activeEnrollment?.service_programs ?? null,
-      activeEnrollment: state?.activeEnrollment ?? null,
-      hasFeature: (code) => state?.featureCodes?.has(code) ?? false,
-    }),
-    [state],
-  )
+  const value = useMemo(() => {
+    if (state === null) {
+      return { loading: true, error: false, enrollmentStatus: null, hasFeature: () => false }
+    }
+    return {
+      loading: false,
+      error: state.error,
+      enrollmentStatus: state.error ? null : state.enrollmentStatus,
+      isCurrentlyActive: state.isCurrentlyActive ?? false,
+      activeProgram: state.isCurrentlyActive ? { code: state.programCode, name: state.programName } : null,
+      // 休会中・期限切れ中でも「直近どのプログラムだったか」は表示できるようにしておく。
+      lastProgram: state.programName ? { code: state.programCode, name: state.programName } : null,
+      startsAt: state.startsAt ?? null,
+      endsAt: state.endsAt ?? null,
+      hasFeature: (code) => (state.error ? false : (state.featureCodes?.has(code) ?? false)),
+    }
+  }, [state])
 
   return <EntitlementsContext.Provider value={value}>{children}</EntitlementsContext.Provider>
 }

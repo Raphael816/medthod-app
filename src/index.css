@@ -136,6 +136,16 @@ a { color: inherit; }
 .nav-subgroup a.active { color: #fff; font-weight: 700; background: rgba(201,161,90,0.14); }
 .sidebar-footer { padding-top: 16px; }
 .sidebar-footer .btn-outline { border-color: rgba(245,242,234,0.4); color: #f5f2ea; width: 100%; }
+.nav-lock-badge { margin-left: auto; flex-shrink: 0; opacity: 0.75; }
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
 
 /* ---------- Bottom nav (mobile) ---------- */
 .bottom-nav { display: none; }

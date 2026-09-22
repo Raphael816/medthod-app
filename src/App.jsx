@@ -19,6 +19,23 @@ import { supabase } from './lib/supabase'
 import { EntitlementsProvider } from './context/EntitlementsContext'
 import { RequireFeature } from './components/RequireFeature'
 
+const HINT = {
+  unit_analysis: '単元登録・単元別到達度の閲覧は、ベーシックプラン以上に含まれます。',
+  materials_view: '教材の閲覧は、ベーシックプラン以上に含まれます。',
+  videos_view: '動画の視聴は、ベーシックプラン以上に含まれます。',
+  basic_practice: '確認問題演習・復習は、ベーシックプラン以上に含まれます。',
+  grades_view: '成績の閲覧は、ベーシックプラン以上に含まれます。',
+  target_university_analysis: '志望校の登録・大学別対策情報の閲覧は、志望校別教科別個人プログラム以上に含まれます。',
+}
+
+function Guard({ code, children }) {
+  return (
+    <RequireFeature code={code} programHint={HINT[code]}>
+      {children}
+    </RequireFeature>
+  )
+}
+
 function App() {
   const [session, setSession] = useState(undefined)
   const [student, setStudent] = useState(null)
@@ -54,28 +71,18 @@ function App() {
         <Routes>
           <Route path="/" element={<HomePage student={student} />} />
           <Route path="/study" element={<Navigate to="/study/units" replace />} />
-          <Route path="/study/units" element={<UnitsRegisteredPage student={student} />} />
-          <Route path="/study/units/add" element={<UnitsAddPage student={student} />} />
-          <Route path="/study/units/:unitId" element={<UnitDetailPage student={student} />} />
-          <Route path="/study/materials" element={<MaterialsListPage student={student} />} />
-          <Route path="/study/materials/:materialId" element={<MaterialDetailPage student={student} />} />
-          <Route path="/study/videos" element={<VideosListPage student={student} />} />
-          <Route path="/study/videos/:videoId" element={<VideoDetailPage student={student} />} />
-          <Route path="/study/review" element={<ReviewPage student={student} />} />
-          <Route path="/practice" element={<PracticePage student={student} />} />
-          <Route path="/practice/:unitId" element={<PracticePage student={student} />} />
-          <Route path="/grades" element={<GradesPage student={student} />} />
-          <Route
-            path="/universities"
-            element={
-              <RequireFeature
-                code="target_university_analysis"
-                programHint="志望校の登録・大学別対策情報の閲覧は、プレミアムプラン・完全伴走プランに含まれます。"
-              >
-                <UniversitiesPage student={student} />
-              </RequireFeature>
-            }
-          />
+          <Route path="/study/units" element={<Guard code="unit_analysis"><UnitsRegisteredPage student={student} /></Guard>} />
+          <Route path="/study/units/add" element={<Guard code="unit_analysis"><UnitsAddPage student={student} /></Guard>} />
+          <Route path="/study/units/:unitId" element={<Guard code="unit_analysis"><UnitDetailPage student={student} /></Guard>} />
+          <Route path="/study/materials" element={<Guard code="materials_view"><MaterialsListPage student={student} /></Guard>} />
+          <Route path="/study/materials/:materialId" element={<Guard code="materials_view"><MaterialDetailPage student={student} /></Guard>} />
+          <Route path="/study/videos" element={<Guard code="videos_view"><VideosListPage student={student} /></Guard>} />
+          <Route path="/study/videos/:videoId" element={<Guard code="videos_view"><VideoDetailPage student={student} /></Guard>} />
+          <Route path="/study/review" element={<Guard code="basic_practice"><ReviewPage student={student} /></Guard>} />
+          <Route path="/practice" element={<Guard code="basic_practice"><PracticePage student={student} /></Guard>} />
+          <Route path="/practice/:unitId" element={<Guard code="basic_practice"><PracticePage student={student} /></Guard>} />
+          <Route path="/grades" element={<Guard code="grades_view"><GradesPage student={student} /></Guard>} />
+          <Route path="/universities" element={<Guard code="target_university_analysis"><UniversitiesPage student={student} /></Guard>} />
           <Route path="/profile" element={<ProfilePage student={student} />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
