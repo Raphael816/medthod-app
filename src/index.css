@@ -536,6 +536,20 @@ a { color: inherit; }
 }
 .chapter-item:hover, .chapter-item:focus-visible { background: var(--bg); }
 
+/* ---------- Timed practice set ---------- */
+.timer-banner {
+  text-align: center;
+  font-size: 0.95rem;
+  padding: 14px 20px;
+  position: sticky;
+  top: 8px;
+  z-index: 5;
+  border: 1px solid var(--border);
+}
+.timer-banner strong { font-family: var(--heading-font); color: var(--navy); font-size: 1.1rem; }
+.timer-banner.warn { border-color: #b3261e; background: rgba(179,38,30,0.06); color: #b3261e; }
+.timer-banner.warn strong { color: #b3261e; }
+
 /* ---------- Question practice ---------- */
 .question-card { border: 1px solid var(--border); border-radius: 18px; padding: 24px; background: var(--card-bg); box-shadow: var(--shadow-sm); }
 .question-type-tag { display: inline-block; font-size: 0.72rem; font-weight: 700; color: var(--gold); letter-spacing: 0.04em; margin-bottom: 10px; }

@@ -11,6 +11,8 @@ import { LINE_URL } from '../../lib/constants'
 import { PROGRAM_STAGES } from '../../lib/programStages'
 
 const STAGE = PROGRAM_STAGES[2]
+const ASSIGNMENT_STATUS_LABEL = { assigned: '未着手', in_progress: '取組中', submitted: '提出済み', reviewed: '採点済み' }
+const ASSIGNMENT_ACTION_LABEL = { assigned: '開始する', in_progress: '続ける', submitted: '提出内容を確認', reviewed: '結果を見る' }
 
 export function UniversityIntensiveProgramPage({ student }) {
   const [state, setState] = useState(null)
@@ -107,12 +109,17 @@ export function UniversityIntensiveProgramPage({ student }) {
                   <h3>{a.practice_sets.title}</h3>
                   {a.practice_sets.description && <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{a.practice_sets.description}</p>}
                 </div>
-                <span className="unit-status-badge status-学習中">{a.status}</span>
+                <span className="status-pill">{ASSIGNMENT_STATUS_LABEL[a.status] ?? a.status}</span>
               </div>
               <div className="unit-meta-row">
                 {a.practice_sets.subject && <span>{a.practice_sets.subject}</span>}
                 {a.practice_sets.time_limit_minutes && <span>制限時間 {a.practice_sets.time_limit_minutes}分</span>}
                 {a.due_date && <span>期限 {a.due_date}</span>}
+              </div>
+              <div className="unit-card-actions">
+                <Link className="btn btn-primary btn-sm" to={`/university-practice/${a.id}`}>
+                  {ASSIGNMENT_ACTION_LABEL[a.status] ?? '開く'}
+                </Link>
               </div>
             </div>
           ))

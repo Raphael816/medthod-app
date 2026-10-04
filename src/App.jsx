@@ -18,6 +18,7 @@ import { ReviewPage } from './pages/study/ReviewPage'
 import { BasicProgramPage } from './pages/program/BasicProgramPage'
 import { SubjectPersonalProgramPage } from './pages/program/SubjectPersonalProgramPage'
 import { UniversityIntensiveProgramPage } from './pages/program/UniversityIntensiveProgramPage'
+import { PracticeSetTakingPage } from './pages/PracticeSetTakingPage'
 import { supabase } from './lib/supabase'
 import { EntitlementsProvider, useEntitlements } from './context/EntitlementsContext'
 import { RequireFeature } from './components/RequireFeature'
@@ -101,6 +102,7 @@ function App() {
           <Route path="/program/basic" element={<Guard code="materials_view"><BasicProgramPage student={student} /></Guard>} />
           <Route path="/program/subject-personal" element={<Guard code="target_university_analysis"><SubjectPersonalProgramPage student={student} /></Guard>} />
           <Route path="/program/university-intensive" element={<Guard code="university_practice"><UniversityIntensiveProgramPage student={student} /></Guard>} />
+          <Route path="/university-practice/:assignmentId" element={<Guard code="university_practice"><PracticeSetTakingPage student={student} /></Guard>} />
           <Route path="/profile" element={<ProfilePage student={student} />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
