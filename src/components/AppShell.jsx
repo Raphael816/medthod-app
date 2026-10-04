@@ -2,6 +2,7 @@ import { NavLink, useLocation } from 'react-router-dom'
 import { Icon3D } from './Icon3D'
 import { useEntitlements } from '../context/EntitlementsContext'
 import { ROUTE_FEATURE_CODES, NAV_LOCK_MODE } from '../lib/featureNav'
+import { PROGRAM_STAGES } from '../lib/programStages'
 
 const STUDY_CHILDREN = [
   { to: '/study/units', label: '登録中の単元' },
@@ -11,9 +12,12 @@ const STUDY_CHILDREN = [
   { to: '/study/review', label: '復習' },
 ]
 
+const PROGRAM_CHILDREN = PROGRAM_STAGES.map((s) => ({ to: s.routePath, label: s.shortName }))
+
 const NAV = [
   { to: '/', label: 'ホーム', shape: 'icosahedron', end: true },
-  { to: '/study', label: '学習', shape: 'octahedron', children: STUDY_CHILDREN },
+  { to: '/program', label: 'マイプログラム', shape: 'dodecahedron', prefix: '/program', children: PROGRAM_CHILDREN },
+  { to: '/study', label: '学習', shape: 'octahedron', prefix: '/study', children: STUDY_CHILDREN },
   { to: '/practice', label: '問題演習', shape: 'tetrahedron' },
   { to: '/grades', label: '成績', shape: 'dodecahedron' },
   { to: '/universities', label: '志望大学', shape: 'torus' },
@@ -42,13 +46,13 @@ function useLockedPaths() {
 
 function NavButton({ item, isLocked }) {
   const location = useLocation()
-  const isStudySection = item.children && location.pathname.startsWith('/study')
+  const isOpenGroup = item.children && item.prefix && location.pathname.startsWith(item.prefix)
   const locked = isLocked(item.to)
   if (locked && NAV_LOCK_MODE === 'hide' && !item.children) return null
 
   return (
-    <div className={isStudySection ? 'nav-group open' : 'nav-group'}>
-      <NavLink to={item.to} end={item.end} className={({ isActive }) => (isActive || isStudySection ? 'active' : '')}>
+    <div className={isOpenGroup ? 'nav-group open' : 'nav-group'}>
+      <NavLink to={item.to} end={item.end} className={({ isActive }) => (isActive || isOpenGroup ? 'active' : '')}>
         <Icon3D shape={item.shape} size={22} />
         {item.label}
         {locked && !item.children && (
@@ -58,7 +62,7 @@ function NavButton({ item, isLocked }) {
           </>
         )}
       </NavLink>
-      {item.children && isStudySection && (
+      {item.children && isOpenGroup && (
         <div className="nav-subgroup">
           {item.children.map((c) => {
             const childLocked = isLocked(c.to)
@@ -106,7 +110,7 @@ export function AppShell({ studentName, onLogout, children }) {
       <main className="main">{children}</main>
 
       <nav className="bottom-nav" aria-label="メインナビゲーション">
-        {NAV.map((item) => {
+        {NAV.filter((item) => !item.children).map((item) => {
           const locked = isLocked(item.to)
           if (locked && NAV_LOCK_MODE === 'hide') return null
           return (

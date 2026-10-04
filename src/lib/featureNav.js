@@ -11,6 +11,9 @@ export const ROUTE_FEATURE_CODES = {
   '/practice': 'basic_practice',
   '/grades': 'grades_view',
   '/universities': 'target_university_analysis',
+  '/program/basic': 'materials_view',
+  '/program/subject-personal': 'target_university_analysis',
+  '/program/university-intensive': 'university_practice',
 }
 
 // 未購入機能をナビゲーションから完全に隠す('hide')か、ロック表示のまま残す('lock')かを

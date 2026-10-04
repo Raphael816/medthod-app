@@ -8,8 +8,11 @@ import { listAttempts } from '../services/questions'
 import { listReviewSchedules } from '../services/review'
 import { listTargetUniversities } from '../services/universities'
 import { aggregateUnitMastery, aggregateSubjectMastery } from '../services/grades'
+import { listMyPublishedFeedback } from '../services/practiceSets'
 import { supabase } from '../lib/supabase'
 import { useEntitlements } from '../context/EntitlementsContext'
+import { StageIndicator } from '../components/StageIndicator'
+import { stageByCode, nextStage } from '../lib/programStages'
 
 function daysUntil(dateStr) {
   if (!dateStr) return null
@@ -48,6 +51,7 @@ export function HomePage({ student }) {
           targets,
           weeklyRecordsRes,
           latestPlanRes,
+          recentFeedback,
         ] = await Promise.all([
           listUnits(),
           listStudentUnits(student.id),
@@ -69,6 +73,7 @@ export function HomePage({ student }) {
             .eq('student_id', student.id)
             .eq('status', 'confirmed')
             .order('week_number', { ascending: false }),
+          listMyPublishedFeedback(student.id, 3),
         ])
 
         setState({
@@ -83,6 +88,7 @@ export function HomePage({ student }) {
           targets,
           weeklyRecords: weeklyRecordsRes.data ?? [],
           plans: latestPlanRes.data ?? [],
+          recentFeedback,
         })
       } catch {
         setError('ホーム画面の読み込みに失敗しました。')
@@ -94,7 +100,7 @@ export function HomePage({ student }) {
   if (error) return <ErrorState message={error} />
   if (state === null) return <Loading />
 
-  const { units, studentUnits, materials, materialProgress, videos, videoProgress, attempts, reviews, targets, weeklyRecords, plans } = state
+  const { units, studentUnits, materials, materialProgress, videos, videoProgress, attempts, reviews, targets, weeklyRecords, plans, recentFeedback } = state
   const [latestPlan, ...planHistory] = plans
 
   async function toggleTask(taskId, current) {
@@ -193,6 +199,21 @@ export function HomePage({ student }) {
                 {activeProgram ? <strong>{activeProgram.name}</strong> : '受講中のプログラムが登録されていません(監修者にお問い合わせください)'}
               </p>
             )}
+            {!entitlementsLoading && activeProgram && <StageIndicator currentCode={activeProgram.code} />}
+            {!entitlementsLoading && activeProgram && (() => {
+              const current = stageByCode(activeProgram.code)
+              const next = nextStage(activeProgram.code)
+              return next ? (
+                <p className="home-next-stage">
+                  次の段階: <strong>{next.shortName}</strong>。{next.description}{' '}
+                  {current && <Link to={current.routePath}>現在の段階の詳細を見る</Link>}
+                </p>
+              ) : (
+                <p className="home-next-stage">
+                  現在、最上位の段階を受講中です。{current && <Link to={current.routePath}>詳細を見る</Link>}
+                </p>
+              )
+            })()}
           </div>
         </div>
         <div className="home-stat-row">
@@ -400,6 +421,22 @@ export function HomePage({ student }) {
               <div className="suggestion-action">
                 <Link to={`/study/units/${m.unit.id}`}>→ {m.unit.name}の教材を見る</Link>
               </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      <div className="card">
+        <div className="section-title-row">
+          <h2>最近の答案添削</h2>
+        </div>
+        {recentFeedback.length === 0 ? (
+          <p className="empty-state">まだ添削結果はありません。</p>
+        ) : (
+          recentFeedback.map((f) => (
+            <div className="upcoming-item" key={f.id}>
+              <span>{f.answer_submissions?.practice_set_attempts?.practice_sets?.title ?? '添削結果'}</span>
+              <span>{f.score != null ? `${f.score}点` : ''}</span>
             </div>
           ))
         )}
