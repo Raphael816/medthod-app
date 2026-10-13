@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { StudyTabs } from '../../components/StudyTabs'
 import { Loading, ErrorState, Empty, ProgressBar } from '../../components/StateViews'
-import { listUnits, listStudentUnits, updateUnitStatus, unregisterUnit } from '../../services/units'
+import { listUnits, listStudentUnits, updateUnitStatus } from '../../services/units'
 import { listMaterials, listMaterialProgress } from '../../services/materials'
 import { listVideos, listVideoProgress } from '../../services/videos'
 import { listAttempts } from '../../services/questions'
@@ -45,11 +45,6 @@ export function UnitsRegisteredPage({ student }) {
     load()
   }
 
-  async function handleUnregister(unitId) {
-    await unregisterUnit(student.id, unitId)
-    load()
-  }
-
   if (error) return <ErrorState message={error} />
   if (state === null) return <Loading />
 
@@ -75,9 +70,7 @@ export function UnitsRegisteredPage({ student }) {
       <StudyTabs />
 
       {registered.length === 0 ? (
-        <Empty>
-          まだ単元を登録していません。<Link to="/study/units/add">単元を追加</Link>から登録してください。
-        </Empty>
+        <Empty>まだ単元が登録されていません。講師が単元を設定すると、ここに表示されます。</Empty>
       ) : (
         <div className="unit-grid">
           {registered.map((su) => {
@@ -137,13 +130,7 @@ export function UnitsRegisteredPage({ student }) {
                   <Link className="btn btn-primary btn-sm" to={`/study/units/${unit.id}`}>
                     続きから学習する
                   </Link>
-                  {su.is_instructor_assigned ? (
-                    <span className="instructor-lock">🔒 講師指定(解除不可)</span>
-                  ) : (
-                    <button className="btn btn-outline btn-sm" onClick={() => handleUnregister(unit.id)}>
-                      登録解除
-                    </button>
-                  )}
+                  {su.is_instructor_assigned && <span className="instructor-lock">🔒 講師指定</span>}
                 </div>
               </div>
             )

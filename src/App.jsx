@@ -8,7 +8,6 @@ import { UniversitiesPage } from './pages/UniversitiesPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { PracticePage } from './pages/PracticePage'
 import { UnitsRegisteredPage } from './pages/study/UnitsRegisteredPage'
-import { UnitsAddPage } from './pages/study/UnitsAddPage'
 import { UnitDetailPage } from './pages/study/UnitDetailPage'
 import { MaterialsListPage } from './pages/study/MaterialsListPage'
 import { MaterialDetailPage } from './pages/study/MaterialDetailPage'
@@ -88,7 +87,6 @@ function App() {
           <Route path="/program" element={<ProgramIndexRedirect />} />
           <Route path="/study" element={<Navigate to="/study/units" replace />} />
           <Route path="/study/units" element={<Guard code="unit_analysis"><UnitsRegisteredPage student={student} /></Guard>} />
-          <Route path="/study/units/add" element={<Guard code="unit_analysis"><UnitsAddPage student={student} /></Guard>} />
           <Route path="/study/units/:unitId" element={<Guard code="unit_analysis"><UnitDetailPage student={student} /></Guard>} />
           <Route path="/study/materials" element={<Guard code="materials_view"><MaterialsListPage student={student} /></Guard>} />
           <Route path="/study/materials/:materialId" element={<Guard code="materials_view"><MaterialDetailPage student={student} /></Guard>} />

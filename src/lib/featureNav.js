@@ -4,7 +4,6 @@
 // 最終判定するため、この対応表はUI表示のためのショートカットに過ぎない)。
 export const ROUTE_FEATURE_CODES = {
   '/study/units': 'unit_analysis',
-  '/study/units/add': 'unit_analysis',
   '/study/materials': 'materials_view',
   '/study/videos': 'videos_view',
   '/study/review': 'basic_practice',

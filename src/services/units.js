@@ -43,25 +43,9 @@ export async function listStudentUnits(studentId) {
   return data ?? []
 }
 
-export async function registerUnit(studentId, unitId, { priority = 3, status = '未着手' } = {}) {
-  const { error } = await supabase
-    .from('student_unit_priorities')
-    .upsert(
-      { student_id: studentId, unit_id: unitId, is_registered: true, priority, status },
-      { onConflict: 'student_id,unit_id' },
-    )
-  if (error) throw error
-}
-
-export async function unregisterUnit(studentId, unitId) {
-  const { error } = await supabase
-    .from('student_unit_priorities')
-    .update({ is_registered: false })
-    .eq('student_id', studentId)
-    .eq('unit_id', unitId)
-    .eq('is_instructor_assigned', false)
-  if (error) throw error
-}
+// 単元の登録(is_registered)・必須指定(is_instructor_assigned)は講師(admin-web)のみが行う。
+// 生徒は登録済み単元の学習ステータスだけ自分で更新できる(DB側のトリガーでも、生徒からの
+// is_registered/is_instructor_assignedの変更は無効化される)。
 
 export async function updateUnitStatus(studentId, unitId, status) {
   const { error } = await supabase
@@ -69,15 +53,5 @@ export async function updateUnitStatus(studentId, unitId, status) {
     .update({ status, updated_at: new Date().toISOString() })
     .eq('student_id', studentId)
     .eq('unit_id', unitId)
-  if (error) throw error
-}
-
-export async function updateUnitPriority(studentId, unitId, priority) {
-  const { error } = await supabase
-    .from('student_unit_priorities')
-    .upsert(
-      { student_id: studentId, unit_id: unitId, priority, is_registered: priority > 0 },
-      { onConflict: 'student_id,unit_id' },
-    )
   if (error) throw error
 }

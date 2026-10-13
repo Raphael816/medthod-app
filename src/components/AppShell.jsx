@@ -6,7 +6,6 @@ import { PROGRAM_STAGES } from '../lib/programStages'
 
 const STUDY_CHILDREN = [
   { to: '/study/units', label: '登録中の単元' },
-  { to: '/study/units/add', label: '単元を追加' },
   { to: '/study/materials', label: '教材' },
   { to: '/study/videos', label: '動画' },
   { to: '/study/review', label: '復習' },

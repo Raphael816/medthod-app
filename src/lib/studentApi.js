@@ -2,7 +2,7 @@ import { supabase } from './supabase'
 
 const FUNCTIONS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`
 
-export async function callStudentApi(action) {
+export async function callStudentApi(action, payload = {}) {
   const { data: sessionData } = await supabase.auth.getSession()
   const token = sessionData.session?.access_token
   const res = await fetch(`${FUNCTIONS_URL}/student-api`, {
@@ -11,7 +11,7 @@ export async function callStudentApi(action) {
       'content-type': 'application/json',
       authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({ action }),
+    body: JSON.stringify({ action, payload }),
   })
   const json = await res.json()
   if (!res.ok) throw new Error(json.error || 'リクエストに失敗しました。')

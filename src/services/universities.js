@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase'
+import { callStudentApi } from '../lib/studentApi'
 
 export async function listUniversityProfiles() {
   const { data, error } = await supabase.from('university_profiles').select('id, name, aliases, summary, source_url')
@@ -16,17 +17,16 @@ export async function listTargetUniversities(studentId) {
   return data ?? []
 }
 
-export async function addTargetUniversity(studentId, universityName, universityProfileId, rank) {
-  const { error } = await supabase.from('student_target_universities').insert({
-    student_id: studentId,
-    university_name: universityName,
-    university_profile_id: universityProfileId ?? null,
-    rank,
-  })
-  if (error) throw error
+// student-api経由にしているのは、第一志望(rank=1)が変わったときにAIのプラン下書きを
+// 自動で再生成する副作用をサーバー側で行うため(RLS直書きではこの副作用が起きない)。
+export async function addTargetUniversity(universityName, universityProfileId) {
+  return callStudentApi('add_target_university', { universityName, universityProfileId: universityProfileId ?? null })
 }
 
 export async function removeTargetUniversity(id) {
-  const { error } = await supabase.from('student_target_universities').delete().eq('id', id)
-  if (error) throw error
+  return callStudentApi('remove_target_university', { id })
+}
+
+export async function setPrimaryTargetUniversity(id) {
+  return callStudentApi('set_primary_target_university', { id })
 }
